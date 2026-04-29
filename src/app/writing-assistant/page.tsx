@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import CopyButton from '@/components/CopyButton';
 import DownloadButton from '@/components/DownloadButton';
 
@@ -10,6 +10,38 @@ interface Version {
   result: string;
   assistType: string;
   timestamp: number;
+}
+
+// Calculate readability stats
+function getStats(text: string) {
+  const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+  const wordCount = words.length;
+  const charCount = text.length;
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const sentenceCount = sentences.length;
+  const avgWordLength = wordCount > 0 ? words.reduce((sum, w) => sum + w.length, 0) / wordCount : 0;
+  
+  // Simple syllable counter (approximate)
+  const countSyllables = (word: string): number => {
+    word = word.toLowerCase();
+    if (word.length <= 3) return 1;
+    word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+    word = word.replace(/^y/, '');
+    const matches = word.match(/[aeiouy]{1,2}/g);
+    return matches ? matches.length : 1;
+  };
+  
+  const totalSyllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
+  const fleschKincaid = wordCount > 0 && sentenceCount > 0 ? 
+    206.835 - 1.015 * (wordCount / sentenceCount) - 84.6 * (totalSyllables / wordCount) : 0;
+  
+  return { 
+    wordCount, 
+    charCount, 
+    sentenceCount, 
+    avgWordLength: avgWordLength.toFixed(1), 
+    fleschKincaid: fleschKincaid.toFixed(1) 
+  };
 }
 
 export default function WritingAssistant() {
@@ -22,6 +54,9 @@ export default function WritingAssistant() {
   const [showVersions, setShowVersions] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
+
+  // Compute stats in real-time
+  const stats = useMemo(() => getStats(text), [text]);
 
   const assistTypes = [
     { id: 'grammar', label: 'Grammar & Spelling' },
@@ -85,27 +120,6 @@ export default function WritingAssistant() {
     setShowVersions(false);
   };
 
-  // Simple diff function (character-level)
-  const getDiff = (oldText: string, newText: string) => {
-    const diff: { value: string; added: boolean; removed: boolean }[] = [];
-    const maxLen = Math.max(oldText.length, newText.length);
-    
-    for (let i = 0; i < maxLen; i++) {
-      if (i >= oldText.length) {
-        diff.push({ value: newText[i], added: true, removed: false });
-      } else if (i >= newText.length) {
-        diff.push({ value: oldText[i], added: false, removed: true });
-      } else if (oldText[i] !== newText[i]) {
-        diff.push({ value: oldText[i], added: false, removed: true });
-        diff.push({ value: newText[i], added: true, removed: false });
-      } else {
-        diff.push({ value: oldText[i], added: false, removed: false });
-      }
-    }
-    
-    return diff;
-  };
-
   // Generate filename for download
   const getDownloadFilename = () => {
     const prefix = assistType === 'grammar' ? 'grammar_corrected' :
@@ -135,6 +149,40 @@ export default function WritingAssistant() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Input Section */}
           <div className="bg-gray-900 rounded-xl p-4 md:p-6 border border-gray-800">
+            {/* Stats Bar */}
+            <div className="mb-4 p-3 bg-gray-800 rounded-lg border border-gray-700">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs text-gray-300">
+                <div>
+                  <span className="text-gray-500">Words:</span>
+                  <span className="ml-1 font-medium">{stats.wordCount}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Chars:</span>
+                  <span className="ml-1 font-medium">{stats.charCount}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Sentences:</span>
+                  <span className="ml-1 font-medium">{stats.sentenceCount}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Avg Word:</span>
+                  <span className="ml-1 font-medium">{stats.avgWordLength}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Readability:</span>
+                  <span className={`ml-1 font-medium ${
+                    parseFloat(stats.fleschKincaid) > 60 ? 'text-green-400' :
+                    parseFloat(stats.fleschKincaid) > 30 ? 'text-yellow-400' : 'text-red-400'
+                  }`}>
+                    {stats.fleschKincaid}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-gray-500">
+                Flesch-Kincaid score: higher = easier to read (60+ good, 30-60 medium, below 30 hard)
+              </div>
+            </div>
+
             <div className="mb-6">
               <label className="block text-gray-300 mb-2 font-medium">Your Text</label>
               <textarea
