@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Writing Assistant
 
-## Getting Started
+An AI-powered productivity tool built with Next.js, TypeScript, and Tailwind CSS. Features include an AI Prompt Builder and Writing Assistant to help you create better content faster.
 
-First, run the development server:
+![GitHub stars](https://img.shields.io/github/stars/ayyushnegii/ai-writing-assistant?style=social)
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
+## 🚀 Features
+
+### AI Prompt Builder
+- Generate optimized prompts for any task
+- Select from multiple AI models (OpenRouter supported)
+- Choose output formats (Markdown, JSON, Plain Text)
+- Copy prompts to clipboard with one click
+
+### AI Writing Assistant
+- Grammar & spelling correction
+- Style improvement suggestions
+- Content expansion and shortening
+- Tone adjustment for professional communication
+- Real-time AI-powered feedback
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS (Dark Neon Theme)
+- **AI Provider**: OpenRouter (supports 200+ models)
+- **Deployment**: Vercel-ready
+
+## 📦 Setup Instructions
+
+### 1. Prerequisites
+- Node.js 18+ (you have v22.22.2 installed)
+- OpenRouter API key ([get one free here](https://openrouter.ai/keys))
+
+### 2. Clone the repo
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/ayyushnegii/ai-writing-assistant.git
+cd ai-writing-assistant
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Install dependencies (when you have good internet)
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Configure environment variables
+```bash
+cp .env.example .env.local
+```
+Then edit `.env.local` and add your OpenRouter API key:
+```
+OPENROUTER_API_KEY=your_actual_api_key_here
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 5. Run locally
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Learn More
+## 🌐 Deployment
 
-To learn more about Next.js, take a look at the following resources:
+This project is ready to deploy on Vercel:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Push your changes to GitHub
+2. Go to [Vercel](https://vercel.com)
+3. Import your `ai-writing-assistant` repository
+4. Add the `OPENROUTER_API_KEY` environment variable
+5. Deploy!
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📝 Environment Variables
 
-## Deploy on Vercel
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENROUTER_API_KEY` | Yes | Your OpenRouter API key for AI model access |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🤝 Contributing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Contributions welcome! Feel free to open issues or pull requests.
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+Built by [Ayush Negi](https://github.com/ayyushnegii) as part of his portfolio demonstrating AI workflow integration.
