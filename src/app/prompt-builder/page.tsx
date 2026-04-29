@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CopyButton from '@/components/CopyButton';
+import Spinner from '@/components/Spinner';
 
 interface HistoryItem {
   task: string;
@@ -177,16 +178,23 @@ export default function PromptBuilder() {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-900/30 border border-red-500 rounded-lg text-red-400">
-              {error}
+            <div className="mb-6 p-4 bg-red-900/30 border border-red-500 rounded-lg text-red-400 flex justify-between items-center">
+              <span>{error}</span>
+              <button
+                onClick={handleGenerate}
+                className="ml-4 px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded transition-colors"
+              >
+                Retry
+              </button>
             </div>
           )}
 
           <button
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full px-8 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-8 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
+            {loading && <Spinner />}
             {loading ? 'Generating...' : 'Generate Optimized Prompt'}
           </button>
 
@@ -235,7 +243,23 @@ export default function PromptBuilder() {
           )}
         </div>
 
-        {generatedPrompt && (
+        {/* Loading Skeleton for Generated Prompt */}
+        {loading && (
+          <div className="mt-8 bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div className="animate-pulse flex space-x-4">
+              <div className="flex-1 space-y-4 py-1">
+                <div className="h-4 bg-gray-700 rounded w-1/4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-700 rounded w-5/6"></div>
+                  <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {generatedPrompt && !loading && (
           <div className="mt-8 bg-gray-900 rounded-xl p-6 border border-gray-800">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-cyan-400">Generated Prompt</h2>
@@ -252,14 +276,32 @@ export default function PromptBuilder() {
               <button
                 onClick={handleTestPrompt}
                 disabled={testLoading}
-                className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                {testLoading && <Spinner />}
                 {testLoading ? 'Testing...' : 'Test This Prompt'}
               </button>
 
               {testError && (
-                <div className="mt-4 p-4 bg-red-900/30 border border-red-500 rounded-lg text-red-400">
-                  {testError}
+                <div className="mt-4 p-4 bg-red-900/30 border border-red-500 rounded-lg text-red-400 flex justify-between items-center">
+                  <span>{testError}</span>
+                  <button
+                    onClick={handleTestPrompt}
+                    className="ml-4 px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {/* Loading skeleton for test result */}
+              {testLoading && (
+                <div className="mt-4 animate-pulse">
+                  <div className="h-4 bg-gray-700 rounded w-1/6 mb-2"></div>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-gray-700 rounded"></div>
+                    <div className="h-4 bg-gray-700 rounded w-5/6"></div>
+                  </div>
                 </div>
               )}
 
