@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import CopyButton from '@/components/CopyButton';
 import DownloadButton from '@/components/DownloadButton';
 
@@ -55,8 +55,41 @@ export default function WritingAssistant() {
   const [showDiff, setShowDiff] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
+  // Real-time suggestions states
+  const [realtimeSuggestions, setRealtimeSuggestions] = useState('');
+  const [realtimeLoading, setRealtimeLoading] = useState(false);
+
   // Compute stats in real-time
   const stats = useMemo(() => getStats(text), [text]);
+
+  // Debounced real-time suggestions
+  useEffect(() => {
+    if (!text.trim() || text.trim().split(/\s+/).length < 5) {
+      setRealtimeSuggestions('');
+      return;
+    }
+    
+    const timer = setTimeout(async () => {
+      setRealtimeLoading(true);
+      try {
+        const response = await fetch('/api/writing-assist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, assistType }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setRealtimeSuggestions(data.result);
+        }
+      } catch (err) {
+        // Silently fail for real-time
+      } finally {
+        setRealtimeLoading(false);
+      }
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timer);
+  }, [text, assistType]);
 
   const assistTypes = [
     { id: 'grammar', label: 'Grammar & Spelling' },
@@ -193,6 +226,36 @@ export default function WritingAssistant() {
                 className="w-full h-64 bg-gray-800 border border-gray-700 rounded-lg p-4 text-gray-100 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none resize-none font-mono text-sm"
               />
             </div>
+
+            {/* Real-Time Suggestions Preview */}
+            {(realtimeSuggestions || realtimeLoading) && (
+              <div className="mb-6 p-4 bg-gray-800 rounded-lg border border-purple-700">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-sm font-medium text-purple-400">
+                    Real-Time Suggestions
+                    {realtimeLoading && <span className="ml-2 inline-block animate-spin">⟳</span>}
+                  </h3>
+                  {realtimeSuggestions && (
+                    <button
+                      onClick={() => {
+                        setText(realtimeSuggestions);
+                        setRealtimeSuggestions('');
+                      }}
+                      className="text-xs px-2 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded transition-colors"
+                    >
+                      Apply
+                    </button>
+                  )}
+                </div>
+                {realtimeLoading ? (
+                  <div className="text-xs text-gray-400 italic">Analyzing...</div>
+                ) : (
+                  <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono max-h-32 overflow-y-auto">
+                    {realtimeSuggestions}
+                  </pre>
+                )}
+              </div>
+            )}
 
             <div className="mb-6">
               <label className="block text-gray-300 mb-2 font-medium">Assistance Type</label>
