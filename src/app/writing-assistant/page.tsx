@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import CopyButton from '@/components/CopyButton';
 
 export default function WritingAssistant() {
   const [text, setText] = useState('');
@@ -102,7 +103,10 @@ export default function WritingAssistant() {
 
           {/* Result Section */}
           <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <h2 className="text-2xl font-bold mb-4 text-purple-400">AI Suggestions</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-purple-400">AI Suggestions</h2>
+              {result && <CopyButton text={result} label="Copy Result" />}
+            </div>
             {result ? (
               <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 h-64 overflow-y-auto">
                 <pre className="text-gray-300 whitespace-pre-wrap font-mono text-sm">
