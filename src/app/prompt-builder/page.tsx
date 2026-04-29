@@ -204,6 +204,40 @@ export default function PromptBuilder() {
     saveHistory([]);
   };
 
+  // Export history as JSON file
+  const handleExportHistory = () => {
+    const dataStr = JSON.stringify(history, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prompt_history_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Import history from JSON file
+  const handleImportHistory = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target?.result as string) as HistoryItem[];
+        // Merge with existing, keep max 10 most recent
+        const merged = [...imported, ...history].slice(0, 10);
+        saveHistory(merged);
+      } catch (err) {
+        alert('Invalid JSON file');
+      }
+    };
+    reader.readAsText(file);
+    // Reset file input
+    e.target.value = '';
+  };
+
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
     alert('Share link copied to clipboard!');
@@ -329,6 +363,15 @@ export default function PromptBuilder() {
             {loading ? 'Generating...' : 'Generate Optimized Prompt'}
           </button>
 
+          {/* Hidden file input for import */}
+          <input
+            type="file"
+            id="import-history"
+            accept=".json"
+            onChange={handleImportHistory}
+            className="hidden"
+          />
+
           {/* History Section */}
           {history.length > 0 && (
             <div className="mt-6 border-t border-gray-800 pt-4">
@@ -339,12 +382,26 @@ export default function PromptBuilder() {
                 >
                   {showHistory ? '▼' : '▶'} Prompt History ({history.length})
                 </button>
-                <button
-                  onClick={clearHistory}
-                  className="text-sm text-red-400 hover:text-red-300 transition-colors"
-                >
-                  Clear All
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => document.getElementById('import-history')?.click()}
+                    className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                  >
+                    Import
+                  </button>
+                  <button
+                    onClick={handleExportHistory}
+                    className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                  >
+                    Export
+                  </button>
+                  <button
+                    onClick={clearHistory}
+                    className="text-sm text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    Clear All
+                  </button>
+                </div>
               </div>
 
               {showHistory && (
