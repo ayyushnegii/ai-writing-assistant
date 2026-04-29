@@ -47,9 +47,18 @@ export default function WritingAssistant() {
     }
   };
 
+  const handleAccept = () => {
+    setText(result);
+    setResult('');
+  };
+
+  const handleReject = () => {
+    setResult('');
+  };
+
   return (
     <main className="min-h-screen bg-gray-950 p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
           AI Writing Assistant
         </h1>
@@ -101,17 +110,53 @@ export default function WritingAssistant() {
             </button>
           </div>
 
-          {/* Result Section */}
+          {/* Result Section - Before/After Comparison */}
           <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-purple-400">AI Suggestions</h2>
-              {result && <CopyButton text={result} label="Copy Result" />}
+              {result && <CopyButton text={result} label="Copy Improved" />}
             </div>
+
             {result ? (
-              <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 h-64 overflow-y-auto">
-                <pre className="text-gray-300 whitespace-pre-wrap font-mono text-sm">
-                  {result}
-                </pre>
+              <div className="space-y-4">
+                {/* Comparison View */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Original Text */}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-400 mb-2">Original</h3>
+                    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 h-64 overflow-y-auto">
+                      <pre className="text-gray-400 whitespace-pre-wrap font-mono text-sm">
+                        {text}
+                      </pre>
+                    </div>
+                  </div>
+
+                  {/* Improved Text */}
+                  <div>
+                    <h3 className="text-sm font-medium text-green-400 mb-2">Improved</h3>
+                    <div className="bg-gray-800 rounded-lg p-4 border border-green-700 h-64 overflow-y-auto">
+                      <pre className="text-gray-100 whitespace-pre-wrap font-mono text-sm">
+                        {result}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleAccept}
+                    className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-medium rounded-lg transition-colors"
+                  >
+                    Accept All
+                  </button>
+                  <button
+                    onClick={handleReject}
+                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition-colors"
+                  >
+                    Reject
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 h-64 flex items-center justify-center">
@@ -119,18 +164,6 @@ export default function WritingAssistant() {
                   Your AI-powered suggestions will appear here...
                 </p>
               </div>
-            )}
-
-            {result && (
-              <button
-                onClick={() => {
-                  setText(result);
-                  setResult('');
-                }}
-                className="mt-4 w-full px-6 py-2 border border-purple-500 text-purple-400 hover:bg-purple-900/30 rounded-lg transition-colors"
-              >
-                Apply Suggestions to Editor
-              </button>
             )}
           </div>
         </div>
