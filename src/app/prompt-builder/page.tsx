@@ -1,7 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CopyButton from '@/components/CopyButton';
+
+interface HistoryItem {
+  task: string;
+  prompt: string;
+  model: string;
+  outputFormat: string;
+  timestamp: number;
+}
 
 export default function PromptBuilder() {
   const [task, setTask] = useState('');
@@ -16,7 +24,30 @@ export default function PromptBuilder() {
   const [testLoading, setTestLoading] = useState(false);
   const [testError, setTestError] = useState('');
 
+  // History states
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
   const outputFormats = ['Plain Text', 'Markdown', 'JSON', 'YAML'];
+
+  // Load history from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('promptHistory');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as HistoryItem[];
+        setHistory(parsed);
+      } catch (e) {
+        console.error('Failed to parse history', e);
+      }
+    }
+  }, []);
+
+  // Save history to localStorage whenever it changes
+  const saveHistory = (newHistory: HistoryItem[]) => {
+    setHistory(newHistory);
+    localStorage.setItem('promptHistory', JSON.stringify(newHistory));
+  };
 
   const handleGenerate = async () => {
     if (!task.trim()) {
@@ -42,6 +73,17 @@ export default function PromptBuilder() {
       if (!response.ok) throw new Error(data.error || 'Failed to generate prompt');
 
       setGeneratedPrompt(data.prompt);
+
+      // Add to history (max 10)
+      const newItem: HistoryItem = {
+        task,
+        prompt: data.prompt,
+        model,
+        outputFormat,
+        timestamp: Date.now(),
+      };
+      const newHistory = [newItem, ...history].slice(0, 10);
+      saveHistory(newHistory);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -73,6 +115,19 @@ export default function PromptBuilder() {
     } finally {
       setTestLoading(false);
     }
+  };
+
+  const handleHistoryClick = (item: HistoryItem) => {
+    setTask(item.task);
+    setModel(item.model);
+    setOutputFormat(item.outputFormat);
+    setGeneratedPrompt(item.prompt);
+    setTestResult('');
+    setTestError('');
+  };
+
+  const clearHistory = () => {
+    saveHistory([]);
   };
 
   return (
@@ -134,6 +189,50 @@ export default function PromptBuilder() {
           >
             {loading ? 'Generating...' : 'Generate Optimized Prompt'}
           </button>
+
+          {/* History Section */}
+          {history.length > 0 && (
+            <div className="mt-6 border-t border-gray-800 pt-4">
+              <div className="flex justify-between items-center mb-2">
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="text-gray-300 hover:text-cyan-400 font-medium transition-colors"
+                >
+                  {showHistory ? '▼' : '▶'} Prompt History ({history.length})
+                </button>
+                <button
+                  onClick={clearHistory}
+                  className="text-sm text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Clear All
+                </button>
+              </div>
+
+              {showHistory && (
+                <div className="max-h-48 overflow-y-auto space-y-2">
+                  {history.map((item, index) => (
+                    <div
+                      key={item.timestamp}
+                      onClick={() => handleHistoryClick(item)}
+                      className="p-3 bg-gray-800 rounded-lg border border-gray-700 hover:border-cyan-500 cursor-pointer transition-colors"
+                    >
+                      <div className="flex justify-between items-start">
+                        <p className="text-sm text-gray-300 truncate flex-1">
+                          {item.task}
+                        </p>
+                        <span className="text-xs text-gray-500 ml-2">
+                          {new Date(item.timestamp).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {item.model.split('/').pop()} • {item.outputFormat}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {generatedPrompt && (
