@@ -11,6 +11,11 @@ export default function PromptBuilder() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Test prompt states
+  const [testResult, setTestResult] = useState('');
+  const [testLoading, setTestLoading] = useState(false);
+  const [testError, setTestError] = useState('');
+
   const outputFormats = ['Plain Text', 'Markdown', 'JSON', 'YAML'];
 
   const handleGenerate = async () => {
@@ -22,6 +27,8 @@ export default function PromptBuilder() {
     setLoading(true);
     setError('');
     setGeneratedPrompt('');
+    setTestResult('');
+    setTestError('');
 
     try {
       const response = await fetch('/api/generate-prompt', {
@@ -39,6 +46,32 @@ export default function PromptBuilder() {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTestPrompt = async () => {
+    if (!generatedPrompt) return;
+
+    setTestLoading(true);
+    setTestError('');
+    setTestResult('');
+
+    try {
+      const response = await fetch('/api/test-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: generatedPrompt, model }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || 'Failed to test prompt');
+
+      setTestResult(data.response);
+    } catch (err) {
+      setTestError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setTestLoading(false);
     }
   };
 
@@ -109,10 +142,41 @@ export default function PromptBuilder() {
               <h2 className="text-2xl font-bold text-cyan-400">Generated Prompt</h2>
               <CopyButton text={generatedPrompt} label="Copy Prompt" />
             </div>
-            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 max-h-96 overflow-y-auto">
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 max-h-96 overflow-y-auto mb-4">
               <pre className="text-gray-300 whitespace-pre-wrap font-mono text-sm">
                 {generatedPrompt}
               </pre>
+            </div>
+
+            {/* Test Prompt Section */}
+            <div className="border-t border-gray-800 pt-4">
+              <button
+                onClick={handleTestPrompt}
+                disabled={testLoading}
+                className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {testLoading ? 'Testing...' : 'Test This Prompt'}
+              </button>
+
+              {testError && (
+                <div className="mt-4 p-4 bg-red-900/30 border border-red-500 rounded-lg text-red-400">
+                  {testError}
+                </div>
+              )}
+
+              {testResult && (
+                <div className="mt-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-xl font-bold text-purple-400">AI Response</h3>
+                    <CopyButton text={testResult} label="Copy Response" />
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 max-h-96 overflow-y-auto">
+                    <pre className="text-gray-300 whitespace-pre-wrap font-mono text-sm">
+                      {testResult}
+                    </pre>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
