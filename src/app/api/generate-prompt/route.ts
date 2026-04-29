@@ -13,10 +13,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'OPENROUTER_API_KEY is not configured' }, { status: 500 });
     }
 
-    // Construct optimized prompt based on user input
-    const systemPrompt = `You are an expert prompt engineer. Generate an optimized, production-ready prompt for the following task. The prompt should be clear, specific, and include all necessary context for an AI to complete the task successfully. Output format: ${outputFormat}.`;
+    // Construct optimized prompt — instruct AI to avoid AI-isms
+    const systemPrompt = `You are an expert prompt engineer. Generate an optimized, production-ready prompt for the following task.
 
-    const userPrompt = `Task: ${task}\n\nGenerate an optimized prompt that will make an AI model complete this task effectively. Include any necessary constraints, output format specifications, and examples if relevant.`;
+CRITICAL: The prompt you generate must NOT sound like it was written by an AI. Avoid these AI clichés:
+- "It is important to note that..."
+- "In today's rapidly evolving world..."
+- "As an AI language model..."
+- "I hope this helps..."
+- Excessive hedging ("might want to consider", "it could be beneficial")
+- Overly formal/stilted language
+- Repetitive sentence structures
+- Buzzword overload (leverage, synergy, paradigm, etc.)
+
+Instead, write like a human expert would:
+- Be direct and concise
+- Use natural, varied sentence structures
+- Write at the appropriate skill level for the task
+- Include specific, actionable instructions
+- Use concrete examples when helpful
+- Skip unnecessary preamble and postamble
+
+Output format: ${outputFormat}.`;
+
+    const userPrompt = `Task: ${task}
+
+Generate an optimized prompt that will make an AI model complete this task effectively. Write the prompt itself in a natural, human voice — not like an AI wrote it.`;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -32,7 +54,7 @@ export async function POST(request: NextRequest) {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.3,
+        temperature: 0.5, // Slightly higher for more natural variation
       }),
     });
 
