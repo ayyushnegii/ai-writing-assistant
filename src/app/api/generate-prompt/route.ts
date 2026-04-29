@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { task, model, outputFormat } = await request.json();
+    const { task, model, outputFormat, language = 'en' } = await request.json();
 
     if (!task) {
       return NextResponse.json({ error: 'Task description is required' }, { status: 400 });
@@ -13,7 +13,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'OPENROUTER_API_KEY is not configured' }, { status: 500 });
     }
 
-    // Construct optimized prompt — instruct AI to avoid AI-isms
+    // Language mapping for prompts
+    const languageNames: { [key: string]: string } = {
+      'en': 'English',
+      'es': 'Spanish',
+      'fr': 'French',
+      'de': 'German',
+      'zh': 'Chinese',
+      'ja': 'Japanese',
+      'ko': 'Korean',
+      'pt': 'Portuguese',
+      'ru': 'Russian',
+      'ar': 'Arabic',
+    };
+
+    const languageName = languageNames[language] || 'English';
+
+    // Construct optimized prompt — instruct AI to avoid AI-isms and use specified language
     const systemPrompt = `You are an expert prompt engineer. Generate an optimized, production-ready prompt for the following task.
 
 CRITICAL: The prompt you generate must NOT sound like it was written by an AI. Avoid these AI clichés:
@@ -34,11 +50,12 @@ Instead, write like a human expert would:
 - Use concrete examples when helpful
 - Skip unnecessary preamble and postamble
 
-Output format: ${outputFormat}.`;
+Output format: ${outputFormat}.
+Language: ${languageName}. Write the prompt in ${languageName}.`;
 
     const userPrompt = `Task: ${task}
 
-Generate an optimized prompt that will make an AI model complete this task effectively. Write the prompt itself in a natural, human voice — not like an AI wrote it.`;
+Generate an optimized prompt that will make an AI model complete this task effectively. Write the prompt itself in a natural, human voice — not like an AI wrote it. The prompt should be in ${languageName}.`;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',

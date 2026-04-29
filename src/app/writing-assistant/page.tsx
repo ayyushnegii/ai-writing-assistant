@@ -1,8 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import CopyButton from '@/components/CopyButton';
 import DownloadButton from '@/components/DownloadButton';
+
+interface Version {
+  id: number;
+  text: string;
+  result: string;
+  assistType: string;
+  timestamp: number;
+}
 
 export default function WritingAssistant() {
   const [text, setText] = useState('');
@@ -10,6 +18,10 @@ export default function WritingAssistant() {
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [versions, setVersions] = useState<Version[]>([]);
+  const [showVersions, setShowVersions] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
+  const textRef = useRef<HTMLTextAreaElement>(null);
 
   const assistTypes = [
     { id: 'grammar', label: 'Grammar & Spelling' },
@@ -40,6 +52,16 @@ export default function WritingAssistant() {
 
       if (!response.ok) throw new Error(data.error || 'Failed to get writing assistance');
 
+      // Save version
+      const newVersion: Version = {
+        id: Date.now(),
+        text,
+        result: data.result,
+        assistType,
+        timestamp: Date.now(),
+      };
+      setVersions(prev => [newVersion, ...prev].slice(0, 20)); // Keep last 20 versions
+
       setResult(data.result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -57,6 +79,33 @@ export default function WritingAssistant() {
     setResult('');
   };
 
+  const handleRestoreVersion = (version: Version) => {
+    setText(version.text);
+    setResult(version.result);
+    setShowVersions(false);
+  };
+
+  // Simple diff function (character-level)
+  const getDiff = (oldText: string, newText: string) => {
+    const diff: { value: string; added: boolean; removed: boolean }[] = [];
+    const maxLen = Math.max(oldText.length, newText.length);
+    
+    for (let i = 0; i < maxLen; i++) {
+      if (i >= oldText.length) {
+        diff.push({ value: newText[i], added: true, removed: false });
+      } else if (i >= newText.length) {
+        diff.push({ value: oldText[i], added: false, removed: true });
+      } else if (oldText[i] !== newText[i]) {
+        diff.push({ value: oldText[i], added: false, removed: true });
+        diff.push({ value: newText[i], added: true, removed: false });
+      } else {
+        diff.push({ value: oldText[i], added: false, removed: false });
+      }
+    }
+    
+    return diff;
+  };
+
   // Generate filename for download
   const getDownloadFilename = () => {
     const prefix = assistType === 'grammar' ? 'grammar_corrected' :
@@ -67,18 +116,29 @@ export default function WritingAssistant() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-950 p-8">
+    <main className="min-h-screen bg-gray-950 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-          AI Writing Assistant
-        </h1>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
+            AI Writing Assistant
+          </h1>
+          {versions.length > 0 && (
+            <button
+              onClick={() => setShowVersions(!showVersions)}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm"
+            >
+              {showVersions ? 'Hide Versions' : `📋 Version History (${versions.length})`}
+            </button>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Input Section */}
-          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <div className="bg-gray-900 rounded-xl p-4 md:p-6 border border-gray-800">
             <div className="mb-6">
               <label className="block text-gray-300 mb-2 font-medium">Your Text</label>
               <textarea
+                ref={textRef}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Paste or type your text here..."
@@ -137,9 +197,9 @@ export default function WritingAssistant() {
           </div>
 
           {/* Result Section - Before/After Comparison */}
-          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-purple-400">AI Suggestions</h2>
+          <div className="bg-gray-900 rounded-xl p-4 md:p-6 border border-gray-800">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+              <h2 className="text-xl md:text-2xl font-bold text-purple-400">AI Suggestions</h2>
               {result && (
                 <div className="flex gap-2">
                   <CopyButton text={result} label="Copy Improved" />
@@ -198,6 +258,71 @@ export default function WritingAssistant() {
             )}
           </div>
         </div>
+
+        {/* Version History Panel */}
+        {showVersions && (
+          <div className="mt-8 bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-cyan-400">Version History</h3>
+              <button
+                onClick={() => setShowVersions(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="max-h-96 overflow-y-auto space-y-3">
+              {versions.map((version) => (
+                <div
+                  key={version.id}
+                  className="p-4 bg-gray-800 rounded-lg border border-gray-700 hover:border-cyan-500 cursor-pointer transition-colors"
+                  onClick={() => handleRestoreVersion(version)}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="text-sm font-medium text-cyan-400">
+                        {assistTypes.find(t => t.id === version.assistType)?.label || version.assistType}
+                      </span>
+                      <span className="text-xs text-gray-500 ml-2">
+                        {new Date(version.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDiff(!showDiff);
+                      }}
+                      className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                    >
+                      {showDiff ? 'Hide Diff' : 'Show Diff'}
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-400 truncate">
+                    {version.text.substring(0, 100)}...
+                  </p>
+                  {showDiff && (
+                    <div className="mt-3 p-3 bg-gray-900 rounded border border-gray-700">
+                      <div className="flex gap-4 text-xs">
+                        <div className="flex-1">
+                          <h4 className="text-gray-400 mb-1">Original:</h4>
+                          <pre className="text-gray-500 whitespace-pre-wrap font-mono text-xs">
+                            {version.text}
+                          </pre>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-green-400 mb-1">Improved:</h4>
+                          <pre className="text-gray-300 whitespace-pre-wrap font-mono text-xs">
+                            {version.result}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );

@@ -4,19 +4,36 @@ import { useState, useEffect } from 'react';
 import CopyButton from '@/components/CopyButton';
 import DownloadButton from '@/components/DownloadButton';
 import Spinner from '@/components/Spinner';
+import TemplateBrowser from '@/components/TemplateBrowser';
+import { templates, Template } from '@/data/templates';
 
 interface HistoryItem {
   task: string;
   prompt: string;
   model: string;
   outputFormat: string;
+  language: string;
   timestamp: number;
 }
+
+const languages = [
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Spanish' },
+  { code: 'fr', name: 'French' },
+  { code: 'de', name: 'German' },
+  { code: 'zh', name: 'Chinese' },
+  { code: 'ja', name: 'Japanese' },
+  { code: 'ko', name: 'Korean' },
+  { code: 'pt', name: 'Portuguese' },
+  { code: 'ru', name: 'Russian' },
+  { code: 'ar', name: 'Arabic' },
+];
 
 export default function PromptBuilder() {
   const [task, setTask] = useState('');
   const [model, setModel] = useState('tencent/hy3-preview:free');
   const [outputFormat, setOutputFormat] = useState('Plain Text');
+  const [language, setLanguage] = useState('en');
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,6 +46,7 @@ export default function PromptBuilder() {
   // History states
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   const outputFormats = ['Plain Text', 'Markdown', 'JSON', 'YAML'];
 
@@ -44,6 +62,31 @@ export default function PromptBuilder() {
       }
     }
   }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + Enter to generate
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleGenerate();
+      }
+      // Ctrl/Cmd + Shift + C to copy prompt (when prompt exists)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+        if (generatedPrompt) {
+          e.preventDefault();
+          navigator.clipboard.writeText(generatedPrompt);
+        }
+      }
+      // Escape to close templates
+      if (e.key === 'Escape' && showTemplates) {
+        setShowTemplates(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [generatedPrompt, showTemplates]);
 
   // Save history to localStorage whenever it changes
   const saveHistory = (newHistory: HistoryItem[]) => {
@@ -67,7 +110,7 @@ export default function PromptBuilder() {
       const response = await fetch('/api/generate-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task, model, outputFormat }),
+        body: JSON.stringify({ task, model, outputFormat, language }),
       });
 
       const data = await response.json();
@@ -82,6 +125,7 @@ export default function PromptBuilder() {
         prompt: data.prompt,
         model,
         outputFormat,
+        language,
         timestamp: Date.now(),
       };
       const newHistory = [newItem, ...history].slice(0, 10);
@@ -119,10 +163,16 @@ export default function PromptBuilder() {
     }
   };
 
+  const handleTemplateSelect = (template: Template) => {
+    setTask(template.taskExample);
+    setShowTemplates(false);
+  };
+
   const handleHistoryClick = (item: HistoryItem) => {
     setTask(item.task);
     setModel(item.model);
     setOutputFormat(item.outputFormat);
+    setLanguage(item.language || 'en');
     setGeneratedPrompt(item.prompt);
     setTestResult('');
     setTestError('');
@@ -144,13 +194,36 @@ export default function PromptBuilder() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-950 p-8">
+    <main className="min-h-screen bg-gray-950 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-          AI Prompt Builder
-        </h1>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
+            AI Prompt Builder
+          </h1>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowTemplates(!showTemplates)}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm"
+            >
+              {showTemplates ? 'Hide Templates' : '📚 Browse Templates'}
+            </button>
+            <span className="text-xs text-gray-500 self-center hidden md:inline">
+              Ctrl+Enter to generate
+            </span>
+          </div>
+        </div>
 
-        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        {/* Templates Browser */}
+        {showTemplates && (
+          <div className="mb-6">
+            <TemplateBrowser
+              onSelectTemplate={handleTemplateSelect}
+              onClose={() => setShowTemplates(false)}
+            />
+          </div>
+        )}
+
+        <div className="bg-gray-900 rounded-xl p-4 md:p-6 border border-gray-800">
           <div className="mb-6">
             <label className="block text-gray-300 mb-2 font-medium">Task Description</label>
             <textarea
@@ -161,13 +234,13 @@ export default function PromptBuilder() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label className="block text-gray-300 mb-2 font-medium">AI Model</label>
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-gray-100 focus:border-cyan-500 outline-none"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-gray-100 focus:border-cyan-500 outline-none text-sm"
               >
                 <option value="tencent/hy3-preview:free">Tencent Hy3 (Free)</option>
                 <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Free)</option>
@@ -180,10 +253,23 @@ export default function PromptBuilder() {
               <select
                 value={outputFormat}
                 onChange={(e) => setOutputFormat(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-gray-100 focus:border-cyan-500 outline-none"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-gray-100 focus:border-cyan-500 outline-none text-sm"
               >
                 {outputFormats.map((fmt) => (
                   <option key={fmt} value={fmt}>{fmt}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-gray-300 mb-2 font-medium">Language</label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-gray-100 focus:border-cyan-500 outline-none text-sm"
+              >
+                {languages.map((lang) => (
+                  <option key={lang.code} value={lang.code}>{lang.name}</option>
                 ))}
               </select>
             </div>
@@ -216,7 +302,7 @@ export default function PromptBuilder() {
               <div className="flex justify-between items-center mb-2">
                 <button
                   onClick={() => setShowHistory(!showHistory)}
-                  className="text-gray-300 hover:text-cyan-400 font-medium transition-colors"
+                  className="text-gray-300 hover:text-cyan-400 font-medium transition-colors text-sm"
                 >
                   {showHistory ? '▼' : '▶'} Prompt History ({history.length})
                 </button>
@@ -245,7 +331,7 @@ export default function PromptBuilder() {
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        {item.model.split('/').pop()} • {item.outputFormat}
+                        {item.model.split('/').pop()} • {item.outputFormat} • {languages.find(l => l.code === item.language)?.name || 'English'}
                       </p>
                     </div>
                   ))}
@@ -273,7 +359,7 @@ export default function PromptBuilder() {
 
         {generatedPrompt && !loading && (
           <div className="mt-8 bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
               <h2 className="text-2xl font-bold text-cyan-400">Generated Prompt</h2>
               <div className="flex gap-2">
                 <CopyButton text={generatedPrompt} label="Copy Prompt" />
@@ -322,7 +408,7 @@ export default function PromptBuilder() {
 
               {testResult && (
                 <div className="mt-4">
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-2">
                     <h3 className="text-xl font-bold text-purple-400">AI Response</h3>
                     <div className="flex gap-2">
                       <CopyButton text={testResult} label="Copy Response" />
