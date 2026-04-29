@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CopyButton from '@/components/CopyButton';
+import DownloadButton from '@/components/DownloadButton';
 import Spinner from '@/components/Spinner';
 
 interface HistoryItem {
@@ -129,6 +130,17 @@ export default function PromptBuilder() {
 
   const clearHistory = () => {
     saveHistory([]);
+  };
+
+  // Generate filename for downloads
+  const getPromptFilename = () => {
+    const safeTask = task.substring(0, 20).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    return `prompt_${safeTask || 'generated'}_${Date.now()}.txt`;
+  };
+
+  const getTestResultFilename = () => {
+    const safeTask = task.substring(0, 20).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    return `test_result_${safeTask || 'generated'}_${Date.now()}.txt`;
   };
 
   return (
@@ -263,7 +275,10 @@ export default function PromptBuilder() {
           <div className="mt-8 bg-gray-900 rounded-xl p-6 border border-gray-800">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-cyan-400">Generated Prompt</h2>
-              <CopyButton text={generatedPrompt} label="Copy Prompt" />
+              <div className="flex gap-2">
+                <CopyButton text={generatedPrompt} label="Copy Prompt" />
+                <DownloadButton text={generatedPrompt} filename={getPromptFilename()} label="Download .txt" />
+              </div>
             </div>
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 max-h-96 overflow-y-auto mb-4">
               <pre className="text-gray-300 whitespace-pre-wrap font-mono text-sm">
@@ -309,7 +324,10 @@ export default function PromptBuilder() {
                 <div className="mt-4">
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-xl font-bold text-purple-400">AI Response</h3>
-                    <CopyButton text={testResult} label="Copy Response" />
+                    <div className="flex gap-2">
+                      <CopyButton text={testResult} label="Copy Response" />
+                      <DownloadButton text={testResult} filename={getTestResultFilename()} label="Download .txt" />
+                    </div>
                   </div>
                   <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 max-h-96 overflow-y-auto">
                     <pre className="text-gray-300 whitespace-pre-wrap font-mono text-sm">
