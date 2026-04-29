@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import CopyButton from '@/components/CopyButton';
 import DownloadButton from '@/components/DownloadButton';
 import Spinner from '@/components/Spinner';
@@ -30,6 +31,8 @@ const languages = [
 ];
 
 export default function PromptBuilder() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const [task, setTask] = useState('');
   const [model, setModel] = useState('tencent/hy3-preview:free');
   const [outputFormat, setOutputFormat] = useState('Plain Text');
@@ -50,6 +53,29 @@ export default function PromptBuilder() {
 
   const outputFormats = ['Plain Text', 'Markdown', 'JSON', 'YAML'];
 
+  // Load state from URL params on mount
+  useEffect(() => {
+    const taskParam = searchParams.get('task');
+    const modelParam = searchParams.get('model');
+    const formatParam = searchParams.get('format');
+    const langParam = searchParams.get('lang');
+    
+    if (taskParam) setTask(taskParam);
+    if (modelParam) setModel(modelParam);
+    if (formatParam) setOutputFormat(formatParam);
+    if (langParam) setLanguage(langParam);
+  }, []);
+
+  // Update URL params when state changes (for sharing)
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (task) params.set('task', task);
+    if (model) params.set('model', model);
+    if (outputFormat) params.set('format', outputFormat);
+    if (language) params.set('lang', language);
+    setSearchParams(params, { replace: true });
+  }, [task, model, outputFormat, language]);
+
   // Load history from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('promptHistory');
@@ -66,19 +92,16 @@ export default function PromptBuilder() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + Enter to generate
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
         handleGenerate();
       }
-      // Ctrl/Cmd + Shift + C to copy prompt (when prompt exists)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
         if (generatedPrompt) {
           e.preventDefault();
           navigator.clipboard.writeText(generatedPrompt);
         }
       }
-      // Escape to close templates
       if (e.key === 'Escape' && showTemplates) {
         setShowTemplates(false);
       }
@@ -119,7 +142,6 @@ export default function PromptBuilder() {
 
       setGeneratedPrompt(data.prompt);
 
-      // Add to history (max 10)
       const newItem: HistoryItem = {
         task,
         prompt: data.prompt,
@@ -182,6 +204,11 @@ export default function PromptBuilder() {
     saveHistory([]);
   };
 
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    alert('Share link copied to clipboard!');
+  };
+
   // Generate filename for downloads
   const getPromptFilename = () => {
     const safeTask = task.substring(0, 20).replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -201,6 +228,12 @@ export default function PromptBuilder() {
             AI Prompt Builder
           </h1>
           <div className="flex gap-2">
+            <button
+              onClick={handleShare}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm"
+            >
+              🔗 Share
+            </button>
             <button
               onClick={() => setShowTemplates(!showTemplates)}
               className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm"
@@ -316,7 +349,7 @@ export default function PromptBuilder() {
 
               {showHistory && (
                 <div className="max-h-48 overflow-y-auto space-y-2">
-                  {history.map((item, index) => (
+                  {history.map((item) => (
                     <div
                       key={item.timestamp}
                       onClick={() => handleHistoryClick(item)}
